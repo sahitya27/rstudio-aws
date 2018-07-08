@@ -1,0 +1,53 @@
+Description: >
+    Template to create stack for Asurion AUTHOR-PRD in AWS Asurion VPC
+
+Parameters:
+    EC2AMI:
+        Description: EC2 AMI ID
+        Type: String
+        Default: ami-cfe4b2b0
+Resources:
+    ECSInstanceProfile:
+        Type: AWS::IAM::InstanceProfile
+        Properties:
+            Path: /
+            Roles:
+                - jenkins-iamrole
+
+    EC2Instance:
+        Type: AWS::EC2::Instance
+        Properties:
+            ImageId: !Ref EC2AMI
+            InstanceType: t2.micro
+            SubnetId: subnet-a3e4e18f
+            SecurityGroupIds:
+                - sg-e2b1b0a9
+                - sg-1296d761
+            IamInstanceProfile: !Ref ECSInstanceProfile
+            KeyName: jenkins-key
+            BlockDeviceMappings:
+               - DeviceName: "/dev/xvda"
+                 Ebs:
+                   VolumeSize: "10"
+                   VolumeType: "gp2"
+            Tags:
+                - Key: Name
+                  Value: r-studio
+
+            UserData:
+                Fn::Base64: !Sub |
+                    #!/bin/bash -x
+
+                    yum install aws-cfn-bootstrap -y
+                    yum install -y gcc make tree httpd24 php56 php56-devel php56-mysqlnd php56-pdo php56-mbstring php-pear pcre-devel php56-opcache re2c mod24_ssl memcached php56-pecl-memcached ImageMagick ImageMagick-devel mailx wget
+                    yum update -y
+
+                    sudo yum install docker -y
+                    service docker start
+                    service docker status
+                    docker run -d -p 8787:8787 -e ROOT=TRUE rocker/rstudio
+
+Outputs:
+    EC2Instance:
+        Description: A reference to the EC2 hosts
+        Value: !Ref EC2Instance
